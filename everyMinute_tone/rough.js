@@ -65,63 +65,124 @@ Tone.Note.route("Bass", function(time, note, duration){
 *  SCORE
 */
 
-function wholeBeetsReturn (mul, len) {
-	var scoreBeets = [], sum;
+// function wholeBeetsReturn (mul, len) {
+// 	var scoreBeets = [], sum;
 	
-  	for (var i = 0; i < len; i ++){
-  		//grab some beets
-  		scoreBeets.push(beets[floor(random(1, beets.length))]);	
-  	}
-	//add contents of beets array
-  	sum = scoreBeets.reduce(add, 0);
-  	//if the sum is an odd number
-  	if (sum %2 != 0) {
-  	//sumRound is difference between sum and a whole set of measures
-  		var sumRound;
-  	// if sum will not round to 1, is short phrase
-  		if (sum < .5){
-  			sumRound = .5 - sum;
-  			scoreBeets.push(sumRound);
+//   	for (var i = 0; i < len; i ++){
+//   		//grab some beets
+//   		scoreBeets.push(beets[floor(random(1, beets.length))]);	
+//   	}
+// 	//add contents of beets array
+//   	sum = scoreBeets.reduce(add, 0);
+//   	//if the sum is an odd number
+//   	if (sum %2 != 0) {
+//   	//sumRound is difference between sum and a whole set of measures
+//   		var sumRound;
+//   	// if sum will not round to 1, is short phrase
+//   		if (sum < .5){
+//   			sumRound = .5 - sum;
+//   			scoreBeets.push(sumRound);
+//   		}
+//   		else {
+//   	// if odd and >= 1,
+//   	//not just round but floor the amount to round up by by one for simplicity. 
+// 			sumRound = Math.ceil(sum) - sum; 
+//   			if (Math.abs(sum + sumRound) % 2 == 1 && (sum + sumRound) >= 3) {
+//   				//if this new, larger sum to round plus sum 
+//   				//gonna add up to an odd number like 3, 5, etc add one more to it
+//   				sumRound = sumRound + 1;
+//  				}
+//   	//add the time to the array to make it a full even measure count
+//   			scoreBeets.push(sumRound);
+//   		}
+//   	//	return scoreBeets;
+//   	}
+//   	return scoreBeets;
+// };
+
+var melodyReturn = function (oct, numberOfNotes) {
+	var noteLen = notes.length -1;
+	var scoreNotes = [];
+	var lastNumber;
+	for (var i = 0; i < numberOfNotes; i++) {
+		lastPos = 0;
+		var coin = Math.round(Math.random()*2);
+		if (coin == 1) {
+			var uOrD = [-1,0,1];
+			if (notes[oct][lastPos + uOrD]){
+				scoreNotes[i] = notes[oct][lastPos + uOrD];
+			}
+			else {
+				scoreNotes[i] = notes[oct][ getRandomInt(0,noteLen) ];
+			}
+			lastPos = i;
+		}
+		else {
+  			scoreNotes[i] = notes[oct][ getRandomInt(0,noteLen) ];
+  			lastPos = i;
   		}
-  		else {
-  	// if odd and >= 1,
-  	//not just round but floor the amount to round up by by one for simplicity. 
-			sumRound = Math.ceil(sum) - sum; 
-  			if (Math.abs(sum + sumRound) % 2 == 1 && (sum + sumRound) >= 3) {
-  				//if this new, larger sum to round plus sum 
-  				//gonna add up to an odd number like 3, 5, etc add one more to it
-  				sumRound = sumRound + 1;
- 				}
-  	//add the time to the array to make it a full even measure count
-  			scoreBeets.push(sumRound);
-  		}
-  	//	return scoreBeets;
-  	}
-  	return scoreBeets;
+	}
+	return scoreNotes;
 };
 
-function makeBeats () {
-	var len = getRandomInt(1,6);
+function makeMelody () {
+
+}
+
+function makeScore () {
+	
 	var noteLen = notes.length -1;
 	var durLen = durations.length -1 ;
 	var beatLen = beats.length -1;
 	var beatArray = [];
 
 	for (var i = 0; i < 4; i++) {
+		var len = getRandomInt(1,6);
+		var scoreNotes = melodyReturn(i, len);
+
+		
+
+		// for (var k = 0; k < len; k ++){
+	 //  		//grab some beats
+	 //  		scoreBeets.push(beets[getRandomInt( 0, beatLen ))]);	
+	 //  	}
 		
 		var firstNumber = i;
 		var prevEntry = 0;
-		var note = notes[ getRandomInt(0,noteLen) ];
+		//var note = notes[i][ getRandomInt(0,noteLen) ];
 		
 		for (var j = 0; j < len; j++){
 			var beat;
+			var note = scoreNotes[j];
+			
+
 			//if first beat grab a single beat
 			if (j == 0){ 
-				beat = beats[ getRandomInt( 0,beatLen ) ]; 
+				var coin = Math.round(Math.random()*2);
+				var b;
+				if (coin==1){
+					b = beats[ getRandomInt( 0,beatLen ) ]; 
+					if (b % .25 === 0 ) {
+						console.log("TRUE!");
+					prevEntry = prevEntry + .25;
+				}
+				}
+				else {
+					b = 0;
+				}
+				
+				// if (b )
+				beat = b;
 			}
-			//otherwise add the beats together until they get to 4
+
 			else if (j > 0) {
-				beat = beats[ getRandomInt( 0,beatLen ) ] + prevEntry;
+				if (prevEntry % .125 === 0 ) {
+					console.log("TRUE!");
+					prevEntry = prevEntry + .25;
+				}
+				var b = beats[ getRandomInt( 0,beatLen ) ] + prevEntry;
+				
+				beat = b;
 					
 			}
 
@@ -134,7 +195,6 @@ function makeBeats () {
 			
 			var duration = durations[ getRandomInt(0, durLen) ];
 
-			console.log(" " + note + " " + duration);
 			prevEntry = beat;
 
 			beatEntry.push( firstNumber.toString() + ":" + beat.toString() );
@@ -149,7 +209,7 @@ function makeBeats () {
 	return beatArray;
 }
 
-var kickTimes = makeBeats();
+var kickTimes = makeScore();
 var Score = {
 	"Kick" : [
 		"0:0", "0:2", "1:0", "1:2",
