@@ -2,34 +2,7 @@
 
 
 //////////// MUSIC TONE SECTION
-		var kickEnvelope = new Tone.AmplitudeEnvelope({
-		    "attack": 0.01,
-		    "decay": 0.25,
-		    "sustain": 0,
-		    "release": 0
-		}).toMaster();
 
-		var kick = new Tone.Oscillator("C1").connect(kickEnvelope);
-		kick.start();
-
-		kickSnapEnv = new Tone.ScaledEnvelope({
-		    "attack": 0.00125,
-		    "decay": 0.005,
-		    "sustain": 0,
-		    "release": 0,
-		    "min": "110",
-		    "max": 400
-		}).connect(kick.frequency);
-
-Tone.Note.route("kick", function(time) {
-    kickEnvelope.triggerAttack(time);
-    kickSnapEnv.triggerAttack(time);
-});
-///FX
-
-var lowPass = new Tone.Filter({
-		    "frequency": 14000,
-}).toMaster();
 
 // /*
 // SNARE
@@ -53,29 +26,50 @@ var durations = ["8t", "4n", "8n", "16n"];
 
 var beats = [.25, .125, .5, .75, 1, .25, .25, .5, 1, .75, 2];
 
+///FX
+
+var lowPass = new Tone.Filter({
+		    "frequency": 14000,
+}).toMaster();
+
+//// kick
+
+var kickEnvelope = new Tone.AmplitudeEnvelope({
+    "attack": 0.01,
+    "decay": 0.25,
+    "sustain": 0,
+    "release": 0
+}).toMaster();
+
+var kick = new Tone.Oscillator("C1").connect(kickEnvelope);
+kick.start();
+
+kickSnapEnv = new Tone.ScaledEnvelope({
+    "attack": 0.00125,
+    "decay": 0.005,
+    "sustain": 0,
+    "release": 0,
+    "min": "110",
+    "max": 400
+}).connect(kick.frequency);
+
+Tone.Note.route("kick", function(time) {
+    kickEnvelope.triggerAttack(time);
+    kickSnapEnv.triggerAttack(time);
+});
+
 /**
 *  PIANO
 */
 
 var piano = new Tone.PolySynth(4, Tone.DuoSynth).toMaster();
-Tone.Note.route("Piano", function(time){
-	piano.triggerAttackRelease(["c4", "e4", "a4"], "16n", time);
+
+Tone.Note.route("piano", function(time, note, duration){
+	piano.triggerAttackRelease(note, duration, time);
 });
 /*
 BASS
 */
-
-// var bassEnvelope = new Tone.AmplitudeEnvelope({
-//     "attack": 0.01,
-//     "decay": 0.2,
-//     "sustain": 2,
-//     "release": 0,
-// }).toMaster();
-
-// var bassFilter = new Tone.Filter({
-//     "frequency": 600,
-//     "Q": 8
-// });
 
 var bass = new Tone.MonoSynth({
 	"volume" : -10,
@@ -208,7 +202,6 @@ var chordsReturn = function (c, cLength) {
 					var n = notes[2][ noteInt ];
 					//if this note is the same as the note in the same spot of the last chord
 					if (n == chords[(i - 1)][j]) {
-						//o is new note
 						if (noteInt != 0){
 							n = notes[2][noteInt - 1];
 						}
@@ -216,10 +209,10 @@ var chordsReturn = function (c, cLength) {
 							n = notes[2][noteInt + 1];
 						}
 						//else if new note o is not in key, move it down one more step
-						innerChord.push(o);
+						innerChord.push(n);
 					}
 					else if (n != chords[(i-1)] [j]) {
-						innerChord.push(n + oct[floor(random(octLength))]);
+						innerChord.push(n);
 					}
 				}
 			}
@@ -235,17 +228,23 @@ function makeMelody () {
 
 }
 
-function makeScore () {
+function makeScore (kind) {
 	
 	var noteLen = notes.length -1;
 	var durLen = durations.length -1 ;
 	var beatLen = beats.length -1;
 	var beatArray = [];
-
+	
 	for (var i = 0; i < 4; i++) {
 		var len = getRandomInt(1,6);
-		var scoreNotes = melodyReturn(i, len);
-
+		var scoreNotes = [];
+		if (kind == 'bass'){
+			scoreNotes = melodyReturn(i, len);
+		}
+		if (kind == 'piano'){
+			scoreNotes = chordsReturn(len, 3);
+		}
+		
 		
 
 		// for (var k = 0; k < len; k ++){
@@ -259,7 +258,15 @@ function makeScore () {
 		
 		for (var j = 0; j < len; j++){
 			var beat;
-			var note = scoreNotes[j];
+			if (kind == 'bass'){
+				var note = scoreNotes[j];
+			}
+			if (kind == 'piano') {
+				var note = [];
+				note = scoreNotes[j];
+				console.log(note + " kind [[ piano")
+			}
+			
 			
 
 			//if first beat grab a single beat
@@ -269,7 +276,6 @@ function makeScore () {
 				if (coin==1){
 					b = beats[ getRandomInt( 0,beatLen ) ]; 
 					if (b % .25 === 0 ) {
-						console.log("TRUE!");
 						prevEntry = prevEntry + .25;
 					}
 				}
@@ -283,7 +289,6 @@ function makeScore () {
 
 			else if (j > 0) {
 				if (prevEntry % .125 === 0 ) {
-					console.log("TRUE!");
 					prevEntry = prevEntry + .25;
 				}
 				var b = beats[ getRandomInt( 0,beatLen ) ] + prevEntry;
@@ -308,14 +313,15 @@ function makeScore () {
 			beatEntry.push( duration );
 
 			beatArray.push( beatEntry )
-			console.log(beatEntry + " . beatEntry")
+			console.log(beatEntry + " . beatEntry" + note)
 		}
 	}
 
 	return beatArray;
 }
 
-var kickTimes = makeScore();
+var bassTimes = makeScore('bass');
+var pianoTimes = makeScore('piano');
 var Score = {
 	"kick" : [
 		"0:0", "0:2", "1:0", "1:2",
@@ -337,18 +343,16 @@ var Score = {
 		"18*8n", "22*8n",
 		"26*8n", "30*8n",
 	],
-	// "Piano" : [
-	// 	kickTimes[0][0], kickTimes[1][0],
-	// 	"1:0", "1:2",
-	// 	"2:0", "2:2",
-	// 	"3:0", "3:2"
-	// ],
+	"piano" : [
+		pianoTimes[0], pianoTimes[1], pianoTimes[2], pianoTimes[3],
+		pianoTimes[4], pianoTimes[5], pianoTimes[6], pianoTimes[7]
+	],
 	//additional arguments to the array format are
 	//passed back to the route's callback function
 	"bass" : 
 
 
-		kickTimes
+		bassTimes
 		// kickTimes[4], kickTimes[5],
 		// kickTimes[0], kickTimes[1],
 		// kickTimes[2], kickTimes[3],
@@ -553,9 +557,9 @@ function render() {
 	var bassValue = (bass.envelope.value *5 ) + 2;
 	var hiHatValue = ((closedHiHat.envelope.value += openHiHat.envelope.value) ) + 2;
 	theta += 0.1;
-	console.log( kickValue );
-	console.log (bassValue);
-	console.log( hiHatValue);
+	// console.log( kickValue );
+	// console.log (bassValue);
+	// console.log( hiHatValue);
 	objects[1].scale.z = kickValue;
 	objects[2].scale.y = bassValue;
 	objects[0].scale.x = hiHatValue;
