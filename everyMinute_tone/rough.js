@@ -62,7 +62,14 @@ Tone.Note.route("kick", function(time) {
 *  PIANO
 */
 
-var piano = new Tone.PolySynth(4, Tone.Duoynth).toMaster();
+var freeverb = new Tone.Freeverb().toMaster();
+freeverb.dampening.value = 1000;
+// freeverb.roomSize.value = 
+
+
+var piano = new Tone.PolySynth(4, Tone.DuoSynth).connect(freeverb);
+
+
 
 Tone.Note.route("piano", function(time, note, duration){
 	piano.triggerAttackRelease(note, duration, time);
@@ -86,7 +93,7 @@ var bass = new Tone.MonoSynth({
 		"max" : 1200
 	}
 }).toMaster();
- bass.start;
+ // bass.start;
 
 Tone.Note.route("bass", function(time, note, duration){
 	bass.triggerAttackRelease(note, duration, time);
@@ -301,11 +308,6 @@ function makeScore (kind) {
 			if (beat >= 4) { break; }
 
 			var beatEntry = [];
-			
-			
-			
-			
-			
 
 			prevEntry = beat;
 
@@ -349,10 +351,10 @@ var Score = {
 		"26*8n", "30*8n",
 	],
 	"piano" : [
-		["0:0", ["C2", "E3", "G4"], "1m"],
-		["1:0", ["F2", "A3", "C4"], "1m"],
-		["2:0", ["G2", "D3", "A4"], "1m"],
-		["3:0", ["F3", "A2", "E4"], "1m"]
+		["0:0", ["C2", "E3", "G4"], "3n"],
+		["1:0", ["F2", "A3", "C4"], "3n"],
+		["2:0", ["G2", "D3", "A4"], "3n"],
+		["3:0", ["F3", "A2", "E4"], "3n"]
 	],
 	//additional arguments to the array format are
 	//passed back to the route's callback function
@@ -376,20 +378,15 @@ Tone.Transport.start();
 
 
 ///////////// THREE VISUAL SECTION //////////////////////////////////////////////////
-var colors = [];
-//var container, stats;
-var camera, scene, renderer;
+var container, stats;
+var camera, 
+//controls, 
+scene, renderer;
+var objects = [], plane;
 
 var raycaster = new THREE.Raycaster();
-var mouse = new THREE.Vector2();
-var	offset = new THREE.Vector3();
-var	INTERSECTED, SELECTED;
-var particleMaterial;
-var turnedOff = 0;
-var turnedOn = 1;
-
-var objects = [], plane;
-var ticker = 0,
+var mouse = new THREE.Vector2(),
+offset = new THREE.Vector3(),
 INTERSECTED, SELECTED;
 
 init();
@@ -397,320 +394,248 @@ animate();
 
 function init() {
 
-	container = document.createElement( 'div' );
-	document.body.appendChild( container );
+    container = document.createElement( 'div' );
+    document.body.appendChild( container );
 
-	var info = document.createElement( 'div' );
-	info.style.position = 'absolute';
-	info.style.top = '10px';
-	info.style.width = '100%';
-	info.style.textAlign = 'center';
-	info.innerHTML = 'click to turn each cube on and off';
-	container.appendChild( info );
+    camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 10000 );
+    camera.position.z = 1000;
 
-	camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 10000 );
-	camera.position.set( 0, 300, 500 );
+    // controls = new THREE.TrackballControls( camera );
+    // controls.rotateSpeed = 1.0;
+    // controls.zoomSpeed = 1.2;
+    // controls.panSpeed = 0.8;
+    // controls.noZoom = false;
+    // controls.noPan = false;
+    // controls.staticMoving = true;
+    // controls.dynamicDampingFactor = 0.3;
 
-	scene = new THREE.Scene();
+    scene = new THREE.Scene();
 
-	var geometry = new THREE.BoxGeometry( 100, 100, 100 );
+    scene.add( new THREE.AmbientLight( 0x505050 ) );
 
-	for ( var i = 0; i < 4; i ++ ) {
-		var col = Math.random() * 0xffffff;
-		colors[i] = col;
-		var object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: col, opacity: 0.5 } ) );
-		object.position.x = Math.random() * 800 - 400;
-		object.position.y = Math.random() * 800 - 400;
-		object.position.z = Math.random() * 800 - 400;
+    var light = new THREE.SpotLight( 0xffffff, 1.5 );
+    light.position.set( 0, 500, 2000 );
+    light.castShadow = true;
 
-		object.scale.x = Math.random() * 2 + 1;
-		object.scale.y = Math.random() * 2 + 1;
-		object.scale.z = Math.random() * 2 + 1;
+    light.shadowCameraNear = 200;
+    light.shadowCameraFar = camera.far;
+    light.shadowCameraFov = 50;
 
-		object.rotation.x = Math.random() * 2 * Math.PI;
-		object.rotation.y = Math.random() * 2 * Math.PI;
-		object.rotation.z = Math.random() * 2 * Math.PI;
-		object.uniqueNote = i;
-		console.log(object.uniqueNote);
-		object.claim = turnedOff;
-		object.originalColor = object.material.color;
+    light.shadowBias = -0.00022;
+    light.shadowDarkness = 0.5;
 
-		object.castShadow = true;
-        object.receiveShadow = true;
+    light.shadowMapWidth = 2048;
+    light.shadowMapHeight = 2048;
 
-		scene.add( object );
+    scene.add( light );
 
-		objects.push( object );
+    var geometry = new THREE.BoxGeometry( 40, 40, 40 );
 
-	}
+    for ( var i = 0; i < 4; i ++ ) {
 
-	plane = new THREE.Mesh(
-		new THREE.PlaneBufferGeometry( 2000, 2000, 8, 8 ),
-		new THREE.MeshBasicMaterial( { color: 0x000000, opacity: 0.25, transparent: true } )
-	);
-	plane.visible = false;
-	scene.add( plane );
+      var object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } ) );
 
-	var PI2 = Math.PI * 2;
-	particleMaterial = new THREE.SpriteCanvasMaterial( {
+      object.position.x = Math.random() * 1000 - 500;
+      object.position.y = Math.random() * 600 - 300;
+      object.position.z = Math.random() * 800 - 400;
 
-		color: 0x000000,
-		program: function ( context ) {
+      object.rotation.x = Math.random() * 2 * Math.PI;
+      object.rotation.y = Math.random() * 2 * Math.PI;
+      object.rotation.z = Math.random() * 2 * Math.PI;
 
-			context.beginPath();
-			context.arc( 0, 0, 0.5, 0, PI2, true );
-			context.fill();
+      object.scale.x = Math.random() * 2 + 1;
+      object.scale.y = Math.random() * 2 + 1;
+      object.scale.z = Math.random() * 2 + 1;
 
-		}
+      object.castShadow = true;
+      object.receiveShadow = true;
 
-	} );
-				
-	raycaster = new THREE.Raycaster();
-	// mouse = new THREE.Vector2();
-	// offset = new THREE.Vector3()
-	renderer = new THREE.WebGLRenderer( { antialias: true } );
-	renderer.setClearColor( 0xf0f0f0 );
-	renderer.setPixelRatio( window.devicePixelRatio );
-	renderer.setSize( window.innerWidth, window.innerHeight );
-	renderer.sortObjects = false;
-	container.appendChild( renderer.domElement );
+      scene.add( object );
 
-	renderer.shadowMapEnabled = true;
-        renderer.shadowMapType = THREE.PCFShadowMap;
+      objects.push( object );
 
-	// stats = new Stats();
-	// stats.domElement.style.position = 'absolute';
-	// stats.domElement.style.top = '0px';
-	// container.appendChild( stats.domElement );
+    }
 
-	 document.addEventListener( 'mousemove', onDocumentMouseMove, false );
-	document.addEventListener( 'mousedown', onDocumentMouseDown, false );
-	document.addEventListener( 'touchstart', onDocumentTouchStart, false );
-	document.addEventListener( 'mouseup', onDocumentMouseUp, false );
+    plane = new THREE.Mesh(
+      new THREE.PlaneBufferGeometry( 2000, 2000, 8, 8 ),
+      new THREE.MeshBasicMaterial( { color: 0x000000, opacity: 0.25, transparent: true } )
+    );
+    plane.visible = false;
+    scene.add( plane );
 
-	//
+    renderer = new THREE.WebGLRenderer( { antialias: true } );
+    renderer.setClearColor( 0xf0f0f0 );
+    renderer.setPixelRatio( window.devicePixelRatio );
+    renderer.setSize( window.innerWidth, window.innerHeight );
+    
 
-	window.addEventListener( 'resize', onWindowResize, false );
+    renderer.shadowMapEnabled = true;
+    renderer.shadowMapType = THREE.PCFShadowMap;
+
+    container.appendChild( renderer.domElement );
+
+    var info = document.createElement( 'div' );
+    info.style.position = 'absolute';
+    info.style.top = '10px';
+    info.style.width = '100%';
+    info.style.textAlign = 'center';
+    info.innerHTML = 'drag a cube to change the sound';
+    container.appendChild( info );
+
+    stats = new Stats();
+    stats.domElement.style.position = 'absolute';
+    stats.domElement.style.top = '0px';
+    container.appendChild( stats.domElement );
+
+    renderer.domElement.addEventListener( 'mousemove', onDocumentMouseMove, false );
+    renderer.domElement.addEventListener( 'mousedown', onDocumentMouseDown, false );
+    renderer.domElement.addEventListener( 'mouseup', onDocumentMouseUp, false );
+
+    //
+
+    window.addEventListener( 'resize', onWindowResize, false );
 
 }
 
 function onWindowResize() {
 
-	camera.aspect = window.innerWidth / window.innerHeight;
-	camera.updateProjectionMatrix();
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
 
-	renderer.setSize( window.innerWidth, window.innerHeight );
+    renderer.setSize( window.innerWidth, window.innerHeight );
 
 }
 
-function onDocumentTouchStart( event ) {
-	
-	event.preventDefault();
-	
-	event.clientX = event.touches[0].clientX;
-	event.clientY = event.touches[0].clientY;
-	onDocumentMouseDown( event );
-
-}	
-
 function onDocumentMouseMove( event ) {
 
-	event.preventDefault();
+    event.preventDefault();
 
-	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+    mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+    mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
 
-	//
+    //
 
-	raycaster.setFromCamera( mouse, camera );
+    raycaster.setFromCamera( mouse, camera );
 
-	if ( SELECTED ) {
+    if ( SELECTED ) {
 
-		var intersects = raycaster.intersectObject( plane );
-		SELECTED.position.copy( intersects[ 0 ].point.sub( offset ) );
-		return;
+      var intersects = raycaster.intersectObject( plane );
+      SELECTED.position.copy( intersects[ 0 ].point.sub( offset ) );
+      return;
 
-	}
+    }
 
-	var intersects = raycaster.intersectObjects( objects );
+    var intersects = raycaster.intersectObjects( objects );
 
-	if ( intersects.length > 0 ) {
+    if ( intersects.length > 0 ) {
 
-		if ( INTERSECTED != intersects[ 0 ].object ) {
+      if ( INTERSECTED != intersects[ 0 ].object ) {
 
-			if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
+        if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
 
-			INTERSECTED = intersects[ 0 ].object;
-			INTERSECTED.currentHex = INTERSECTED.material.color.getHex();
+        INTERSECTED = intersects[ 0 ].object;
+        INTERSECTED.currentHex = INTERSECTED.material.color.getHex();
 
-			plane.position.copy( INTERSECTED.position );
-			plane.lookAt( camera.position );
+        plane.position.copy( INTERSECTED.position );
+        plane.lookAt( camera.position );
 
-		}
+      }
 
-		container.style.cursor = 'pointer';
+      container.style.cursor = 'pointer';
 
-	} else {
+    } else {
 
-		if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
+      if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
 
-		INTERSECTED = null;
+      INTERSECTED = null;
 
-		container.style.cursor = 'auto';
+      container.style.cursor = 'auto';
 
-	}
+    }      
 
 }
 
 function onDocumentMouseDown( event ) {
 
-	event.preventDefault();
+    event.preventDefault();
 
-	console.log ("down");
+    var vector = new THREE.Vector3( mouse.x, mouse.y, 0.5 ).unproject( camera );
 
-	var vector = new THREE.Vector3( mouse.x, mouse.y, 0.5 ).unproject( camera );
-	 mouse.x = ( event.clientX / renderer.domElement.width ) * 2 - 1;
- 	mouse.y = - ( event.clientY / renderer.domElement.height ) * 2 + 1;
+    var raycaster = new THREE.Raycaster( camera.position, vector.sub( camera.position ).normalize() );
 
-	raycaster.setFromCamera( mouse, camera );
+    var intersects = raycaster.intersectObjects( objects );
 
-	var intersects = raycaster.intersectObjects( objects );
+    if ( intersects.length > 0 ) {
 
-	if ( intersects.length > 0 ) {
+      // controls.enabled = false;
 
-		
-		//controls.enabled = false;
+      SELECTED = intersects[ 0 ].object;
 
-		SELECTED = intersects[ 0 ].object;
-		console.log ("intersect" + SELECTED); 
-		var intersects = raycaster.intersectObject( plane );
-		offset.copy( intersects[ 0 ].point ).sub( plane.position );
+      var intersects = raycaster.intersectObject( plane );
+      offset.copy( intersects[ 0 ].point ).sub( plane.position );
 
-		container.style.cursor = 'move';
+      container.style.cursor = 'move';
 
-		//console.log(intersects[0].object.uniqueNote);
-
-
-		//intersects[ 0 ].object.material.color.setHex( Math.random() * 0xffffff );
-		// if (SELECTED.object.claim == turnedOn) {
-			
-		// 	console.log("turned off");
-		// 	//synth.triggerRelease(n);
-		// 	intersects[ 0 ].object.claim = turnedOff;
-		// 	intersects[0].object.material.color.setHex(colors[intersects[0].object.uniqueNote]);
-
-		// }
-		// else if (SELECTED.object.claim == turnedOff) {
-			
-		// 	console.log("turned on");
-		// 	//synth.triggerAttack(n);
-		// 	intersects[ 0 ].object.claim = turnedOn;
-		// 	intersects[0].object.material.color.setHex(666699)
-		// }
-		
-
-		var particle = new THREE.Sprite( particleMaterial );
-		particle.position.copy( intersects[ 0 ].point );
-		particle.scale.x = particle.scale.y = 16;
-		scene.add( particle );
-
-
-	}
+    }
 
 }
 
 function onDocumentMouseUp( event ) {
 
-	event.preventDefault();
+    event.preventDefault();
 
-	//controls.enabled = true;
+    // controls.enabled = true;
 
-	if ( INTERSECTED ) {
+    if ( INTERSECTED ) {
 
-		plane.position.copy( INTERSECTED.position );
+      plane.position.copy( INTERSECTED.position );
 
-		SELECTED = null;
+      SELECTED = null;
 
-	}
+    }
 
-	container.style.cursor = 'auto';
+    container.style.cursor = 'auto';
 
 }
 
- //function onDocumentMouseDown( event ) {
-
-// 	event.preventDefault();
-
-// 	mouse.x = ( event.clientX / renderer.domElement.width ) * 2 - 1;
-// 	mouse.y = - ( event.clientY / renderer.domElement.height ) * 2 + 1;
-
-	
-
-// 	if ( intersects.length > 0 ) {
-// 	//	var n = synthNotes[intersects[0].object.uniqueNote];
-// 		console.log(intersects[0].object.uniqueNote);
-
-
-// 		//intersects[ 0 ].object.material.color.setHex( Math.random() * 0xffffff );
-// 		if (intersects[ 0 ].object.claim == turnedOn) {
-			
-// 			console.log("turned off");
-// 			//synth.triggerRelease(n);
-// 			intersects[ 0 ].object.claim = turnedOff;
-// 			intersects[0].object.material.color.setHex(colors[intersects[0].object.uniqueNote]);
-
-// 		}
-// 		else if (intersects[ 0 ].object.claim == turnedOff) {
-			
-// 			console.log("turned on");
-// 			//synth.triggerAttack(n);
-// 			intersects[ 0 ].object.claim = turnedOn;
-// 			intersects[0].object.material.color.setHex(666699)
-// 		}
-		
-
-// 		var particle = new THREE.Sprite( particleMaterial );
-// 		particle.position.copy( intersects[ 0 ].point );
-// 		particle.scale.x = particle.scale.y = 16;
-// 		scene.add( particle );
-
-// 	}
-
-	/*
-	// Parse all the faces
-	for ( var i in intersects ) {
-
-		intersects[ i ].face.material[ 0 ].color.setHex( Math.random() * 0xffffff | 0x80000000 );
-
-	}
-	*/
-// }
-
-			//
+      //
 
 function animate() {
 
-	requestAnimationFrame( animate );
+    requestAnimationFrame( animate );
 
-	render();
-	// stats.update();
+    render();
+    stats.update();
 
 }
+
+
 
 var radius = 600;
 var theta = 0;
 
 function render() {
+	// create array of values to log and then a for each to say if any positon
+	// go below o, floor it to 0
+	// value = value < 0 ? 0 : value;
 	var kickValue = (kickEnvelope.value * 5) + 2;
 	var bassValue = (bass.envelope.value *5 ) + 2;
 	var hiHatValue = ((closedHiHat.envelope.value += openHiHat.envelope.value) ) + 2;
+	var pianoValue = (piano.voices[0].voice0.envelope.value += piano.voices[1].voice0.envelope.value) + 2;
+	
 	theta += 0.1;
+	console.log(objects[0].position.x / 800);
 	// console.log( kickValue );
 	// console.log (bassValue);
 	// console.log( hiHatValue);ff
+	//position
+	// delay.wet.value = (getMouseY() * .001);
+ // 	reverb.wet.value=(getMouseX() * .001);
+
+	// size
 	objects[1].scale.z = kickValue;
 	objects[2].scale.y = bassValue;
-	//objects[3].scale.x = pianoValue;
+	objects[3].scale.x = pianoValue;
 	objects[0].scale.x = hiHatValue;
 	camera.position.x = radius * Math.sin( THREE.Math.degToRad( theta ) );
 	camera.position.y = radius * Math.sin( THREE.Math.degToRad( theta ) );
