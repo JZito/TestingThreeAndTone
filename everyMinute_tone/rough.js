@@ -47,7 +47,10 @@ valuesX[0] = (feedbackDelayClosed.wet);
 valuesX[2] = (feedbackDelayClosed.feedback);
 
 var reverb = new Tone.JCReverb(1).connect(freeverb);
-valuesX[3] = (reverb.wet);
+
+reverb.wet.value = .1;
+
+console.log (reverb.wet.value + " reverb.wet, " + dist.wet.value + " dist wet, " + feedbackDelay.wet.value + " feedbackdelay wet" )
 
 
 
@@ -94,20 +97,23 @@ Tone.Note.route("kick", function(time) {
 // freeverb.roomSize.value = 
 
 
-var piano = new Tone.PolySynth(4, Tone.AMSynth).connect(reverb);
+var piano = new Tone.PolySynth(4, Tone.DuoSynth).connect(reverb);
 
 piano.set({
 	"voice0": {
+		"voice0" : {
 			"filter" : {
-			"type" : "highpass"
-		},
-		"envelope" : {
-			"attack" : 2,
-			"sustain" : 1,
-			"release" : .95
+				"type" : "highpass"
+			},
+			"envelope" : {
+				"attack" : 2,
+				"sustain" : 1,
+				"release" : .95
+			}
 		}
 	},
 	"voice1": {
+		"harmonicity" : 3.67,
 			"filter" : {
 			"type" : "lowpass"
 		},
@@ -118,6 +124,7 @@ piano.set({
 		}
 	},
 	"voice2" : {
+			"harmonicity" : 2,
 			"filter" : {
 			"type" : "highpass"
 		},
@@ -208,6 +215,12 @@ var openHiHat = new Tone.NoiseSynth({
 Tone.Note.route("openHiHat", function(time) {
 		    openHiHat.triggerAttack(time);
 		});
+
+valuesX[3] = (reverb.roomSize);
+valuesZ[0] = (reverb.wet);
+valuesZ[1] = bass.filterEnvelope;
+valuesZ[2] = piano.voices[0].voice0.filterEnvelope;
+valuesZ[3] = piano.voices[1].voice0.filterEnvelope;
 
 
 /**
@@ -687,23 +700,28 @@ function render() {
 	// create array of values to log and then a for each to say if any positon
 	// go below o, ceiling it to 0
 	// value = value < 0 ? 0 : value;
-	var valuesLen = valuesX.length - 1;
+	var valuesLen = valuesX.length;
+	//console.log (reverb.wet.value + " reverb.wet, " + dist.wet.value + " dist wet, " + feedbackDelay.wet.value + " feedbackdelay wet" )
+
 	for (var i = 0; i <  valuesLen; i++) {
 		var val0 = (objects[i].position.x / 1000)
 		val0 = val0 < 0 ? 0 : val0;
 		valuesX[i].value = val0;
-		console.log(val0 + objects[i]);
+		// console.log(val0 + objects[i]);
 		 valuesY[i].value = (objects[i].position.y / 1000);
-		// valuesZ[i].value = (objects[i].position.z / 1000);
+		 console.log (valuesZ[i] + i);
+		 valuesZ[i].value = (objects[i].position.z * 5);
+		 
 		//console.log(valuesX[i] + " . " + valuesX[i].value)
 	}
 	var kickValue = (kickEnvelope.value * 5) + 2;
 	var bassValue = (bass.envelope.value *5 ) + 2;
 	var hiHatValue = ((closedHiHat.envelope.value += openHiHat.envelope.value) ) + 2;
+	var pianoValue = piano.volume.value;
 	//var pianoValue = (piano.voices[0].voice0.envelope.value += piano.voices[1].voice0.envelope.value) + 2;
 	
 	theta += 0.1;
-	feedbackDelayClosed.wet.value = .25;
+	//feedbackDelayClosed.wet.value = .25;
 	// console.log(objects[0].position.x / 800);
 	// console.log( kickValue );
 	// console.log (bassValue);
@@ -715,7 +733,6 @@ function render() {
 	// size
 	objects[1].scale.z = kickValue;
 	objects[2].scale.y = bassValue;
-	//objects[3].scale.x = pianoValue;
 	objects[0].scale.x = hiHatValue;
 	// camera.position.x = radius * Math.sin( THREE.Math.degToRad( theta ) );
 	// camera.position.y = radius * Math.sin( THREE.Math.degToRad( theta ) );
