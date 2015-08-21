@@ -4,33 +4,61 @@
 //////////// MUSIC TONE SECTION
 
 
-// /*
-// SNARE
-// */
-// var snare = new Tone.NoiseSynth().toMaster();
-// Tone.Note.route("Snare", function(time){
-// snare.triggerAttackRelease("8n", time);
-// });
+
+
+
 
 function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-var notes = [  ["C2", "D2", "E2", "G2", "A2", "B2", "C3"],
+var notes = [  ["C3", "D3", "E3", "G2", "A2", "B2", "C3"],
 				["C3", "D3", "E3", "G3", "A3", "B3", "C4"],
 				["C4", "D4", "E4", "G4", "A4", "B4", "C5"],
 				["C5", "D5", "E5", "G5", "A5", "B5", "C6"] ]   ;
 
 //to do: expand durations to multi-dim array for ....? short/fast? triplet? dotted?
 var durations = ["8t", "4n", "8n", "16n"];
-
-var beats = [.25, .125, .5, .75, 1, .25, .25, .5, 1, .75, 2];
+var valuesX = [], valuesY = [], valuesZ = [];
+var beats = [.25, .5, .75, 1, .25, .25, .5, 1, .75, 2];
 
 ///FX
 
 var lowPass = new Tone.Filter({
-		    "frequency": 14000,
+		    "frequency": 16000,
 }).toMaster();
+
+var freeverb = new Tone.Freeverb().toMaster();
+freeverb.dampening.value = 1000;
+valuesX[1] = (freeverb.wet);
+valuesY[3] = (freeverb.dampening);
+
+var dist = new Tone.Distortion(0.8).connect(freeverb);
+valuesY[0] = (dist.wet);
+
+var feedbackDelay = new Tone.FeedbackDelay("4t", 0.75).connect(lowPass);
+feedbackDelay.wet.value = .01;
+valuesY[1] = (feedbackDelay.wet);
+valuesY[2] = (feedbackDelay.feedback);
+
+var feedbackDelayClosed = new Tone.FeedbackDelay("2t", 0.25).connect(lowPass);
+feedbackDelayClosed.wet.value = .25;
+valuesX[0] = (feedbackDelayClosed.wet);
+valuesX[2] = (feedbackDelayClosed.feedback);
+
+var reverb = new Tone.JCReverb(1).connect(freeverb);
+valuesX[3] = (reverb.wet);
+
+
+
+/*
+SNARE
+*/
+var snare = new Tone.NoiseSynth().connect(dist);
+Tone.Note.route("Snare", function(time){
+	snare.triggerAttackRelease("8n", time);
+});
+
 
 //// kick
 
@@ -62,14 +90,44 @@ Tone.Note.route("kick", function(time) {
 *  PIANO
 */
 
-var freeverb = new Tone.Freeverb().toMaster();
-freeverb.dampening.value = 1000;
+
 // freeverb.roomSize.value = 
 
 
-var piano = new Tone.PolySynth(4, Tone.DuoSynth).connect(freeverb);
+var piano = new Tone.PolySynth(4, Tone.AMSynth).connect(reverb);
 
-
+piano.set({
+	"voice0": {
+			"filter" : {
+			"type" : "highpass"
+		},
+		"envelope" : {
+			"attack" : 2,
+			"sustain" : 1,
+			"release" : .95
+		}
+	},
+	"voice1": {
+			"filter" : {
+			"type" : "lowpass"
+		},
+		"envelope" : {
+			"attack" : 2,
+			"sustain" : .25,
+			"release" : .5
+		}
+	},
+	"voice2" : {
+			"filter" : {
+			"type" : "highpass"
+		},
+		"envelope" : {
+			"attack" : 2,
+			"sustain" : .25,
+			"release" : .5
+		}
+	}
+});
 
 Tone.Note.route("piano", function(time, note, duration){
 	piano.triggerAttackRelease(note, duration, time);
@@ -81,7 +139,7 @@ BASS
 var bass = new Tone.MonoSynth({
 	"volume" : -10,
 	"envelope" : {
-		"attack" : 0.1,
+		"attack" : 0.25,
 		"decay" : 0.3,
 		"release" : 2,
 	},
@@ -102,6 +160,7 @@ Tone.Note.route("bass", function(time, note, duration){
 HI HATS HI-HATS
 */
 
+
 var closedHiHat = new Tone.NoiseSynth({
 	"volume" : -10,
     "filter": {
@@ -119,7 +178,7 @@ var closedHiHat = new Tone.NoiseSynth({
         "exponent": 4,
 
     }
-}).connect(lowPass);
+}).connect(feedbackDelayClosed);
 
 
 Tone.Note.route("closedHiHat", function(time) {
@@ -142,7 +201,9 @@ var openHiHat = new Tone.NoiseSynth({
 		        "max": 700,
 		        "exponent": 4,
 		    }
-		}).connect(lowPass);
+		}).connect(feedbackDelay);
+
+
 
 Tone.Note.route("openHiHat", function(time) {
 		    openHiHat.triggerAttack(time);
@@ -331,8 +392,10 @@ for (var p = 0; p < pianoTimes.length; p++) {
 }
 var Score = {
 	"kick" : [
-		"0:0", "0:2", "1:0", "1:2",
-		"2:0", "2:2", "3:0", "3:2"
+		"0:0", "0:1", "0:2", "0:3",
+		"1:0", "1:1", "1:2", "1:3",
+		"2:0", "2:1", "2:2", "2:3",
+		"3:0", "3:1", "3:2", "3:3"
 	],
 	"closedHiHat": [
 		"0*8n", "1*8n", "3*8n", 
@@ -351,10 +414,16 @@ var Score = {
 		"26*8n", "30*8n",
 	],
 	"piano" : [
-		["0:0", ["C2", "E3", "G4"], "3n"],
-		["1:0", ["F2", "A3", "C4"], "3n"],
-		["2:0", ["G2", "D3", "A4"], "3n"],
-		["3:0", ["F3", "A2", "E4"], "3n"]
+		["0:0", ["C2", "E3", "G4"], "1m"],
+		["1:0", ["D2", "A3", "C4"], "1m"],
+		["2:0", ["G2", "D3", "A4"], "1m"],
+		["3:0", ["D3", "A2", "E4"], "1m"]
+	],
+	"snare" : [
+		 "0:1", "0:3",
+		"1:1",  "1:3",
+		"2:0", "2:1", "2:2", "2:3",
+		"3:0", "3:1", "3:2", "3:3"
 	],
 	//additional arguments to the array format are
 	//passed back to the route's callback function
@@ -616,15 +685,26 @@ var theta = 0;
 
 function render() {
 	// create array of values to log and then a for each to say if any positon
-	// go below o, floor it to 0
+	// go below o, ceiling it to 0
 	// value = value < 0 ? 0 : value;
+	var valuesLen = valuesX.length - 1;
+	for (var i = 0; i <  valuesLen; i++) {
+		var val0 = (objects[i].position.x / 1000)
+		val0 = val0 < 0 ? 0 : val0;
+		valuesX[i].value = val0;
+		console.log(val0 + objects[i]);
+		 valuesY[i].value = (objects[i].position.y / 1000);
+		// valuesZ[i].value = (objects[i].position.z / 1000);
+		//console.log(valuesX[i] + " . " + valuesX[i].value)
+	}
 	var kickValue = (kickEnvelope.value * 5) + 2;
 	var bassValue = (bass.envelope.value *5 ) + 2;
 	var hiHatValue = ((closedHiHat.envelope.value += openHiHat.envelope.value) ) + 2;
-	var pianoValue = (piano.voices[0].voice0.envelope.value += piano.voices[1].voice0.envelope.value) + 2;
+	//var pianoValue = (piano.voices[0].voice0.envelope.value += piano.voices[1].voice0.envelope.value) + 2;
 	
 	theta += 0.1;
-	console.log(objects[0].position.x / 800);
+	feedbackDelayClosed.wet.value = .25;
+	// console.log(objects[0].position.x / 800);
 	// console.log( kickValue );
 	// console.log (bassValue);
 	// console.log( hiHatValue);ff
@@ -635,11 +715,11 @@ function render() {
 	// size
 	objects[1].scale.z = kickValue;
 	objects[2].scale.y = bassValue;
-	objects[3].scale.x = pianoValue;
+	//objects[3].scale.x = pianoValue;
 	objects[0].scale.x = hiHatValue;
-	camera.position.x = radius * Math.sin( THREE.Math.degToRad( theta ) );
-	camera.position.y = radius * Math.sin( THREE.Math.degToRad( theta ) );
-	camera.position.z = radius * Math.cos( THREE.Math.degToRad( theta ) );
+	// camera.position.x = radius * Math.sin( THREE.Math.degToRad( theta ) );
+	// camera.position.y = radius * Math.sin( THREE.Math.degToRad( theta ) );
+	// camera.position.z = radius * Math.cos( THREE.Math.degToRad( theta ) );
 	camera.lookAt( scene.position );
 
 	renderer.render( scene, camera );
