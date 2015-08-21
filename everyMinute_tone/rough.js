@@ -62,7 +62,7 @@ Tone.Note.route("kick", function(time) {
 *  PIANO
 */
 
-var piano = new Tone.PolySynth(4, Tone.DuoSynth).toMaster();
+var piano = new Tone.PolySynth(4, Tone.Duoynth).toMaster();
 
 Tone.Note.route("piano", function(time, note, duration){
 	piano.triggerAttackRelease(note, duration, time);
@@ -375,19 +375,22 @@ Tone.Transport.setLoopPoints(0, "4m");
 Tone.Transport.start();
 
 
-///////////// THREE VISUAL SECTION
+///////////// THREE VISUAL SECTION //////////////////////////////////////////////////
 var colors = [];
 //var container, stats;
 var camera, scene, renderer;
+
+var raycaster = new THREE.Raycaster();
+var mouse = new THREE.Vector2();
+var	offset = new THREE.Vector3();
+var	INTERSECTED, SELECTED;
 var particleMaterial;
 var turnedOff = 0;
 var turnedOn = 1;
 
-var raycaster;
-var mouse;
-
-var objects = [];
-var ticker = 0;
+var objects = [], plane;
+var ticker = 0,
+INTERSECTED, SELECTED;
 
 init();
 animate();
@@ -412,10 +415,10 @@ function init() {
 
 	var geometry = new THREE.BoxGeometry( 100, 100, 100 );
 
-	for ( var i = 0; i < 3; i ++ ) {
+	for ( var i = 0; i < 4; i ++ ) {
 		var col = Math.random() * 0xffffff;
 		colors[i] = col;
-		var object = new THREE.Mesh( geometry, new THREE.MeshBasicMaterial( { color: col, opacity: 0.5 } ) );
+		var object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: col, opacity: 0.5 } ) );
 		object.position.x = Math.random() * 800 - 400;
 		object.position.y = Math.random() * 800 - 400;
 		object.position.z = Math.random() * 800 - 400;
@@ -432,11 +435,21 @@ function init() {
 		object.claim = turnedOff;
 		object.originalColor = object.material.color;
 
+		object.castShadow = true;
+        object.receiveShadow = true;
+
 		scene.add( object );
 
 		objects.push( object );
 
 	}
+
+	plane = new THREE.Mesh(
+		new THREE.PlaneBufferGeometry( 2000, 2000, 8, 8 ),
+		new THREE.MeshBasicMaterial( { color: 0x000000, opacity: 0.25, transparent: true } )
+	);
+	plane.visible = false;
+	scene.add( plane );
 
 	var PI2 = Math.PI * 2;
 	particleMaterial = new THREE.SpriteCanvasMaterial( {
@@ -453,21 +466,27 @@ function init() {
 	} );
 				
 	raycaster = new THREE.Raycaster();
-	mouse = new THREE.Vector2();
-
-	renderer = new THREE.CanvasRenderer();
+	// mouse = new THREE.Vector2();
+	// offset = new THREE.Vector3()
+	renderer = new THREE.WebGLRenderer( { antialias: true } );
 	renderer.setClearColor( 0xf0f0f0 );
 	renderer.setPixelRatio( window.devicePixelRatio );
 	renderer.setSize( window.innerWidth, window.innerHeight );
+	renderer.sortObjects = false;
 	container.appendChild( renderer.domElement );
+
+	renderer.shadowMapEnabled = true;
+        renderer.shadowMapType = THREE.PCFShadowMap;
 
 	// stats = new Stats();
 	// stats.domElement.style.position = 'absolute';
 	// stats.domElement.style.top = '0px';
 	// container.appendChild( stats.domElement );
 
+	 document.addEventListener( 'mousemove', onDocumentMouseMove, false );
 	document.addEventListener( 'mousedown', onDocumentMouseDown, false );
 	document.addEventListener( 'touchstart', onDocumentTouchStart, false );
+	document.addEventListener( 'mouseup', onDocumentMouseUp, false );
 
 	//
 
@@ -494,38 +513,100 @@ function onDocumentTouchStart( event ) {
 
 }	
 
+function onDocumentMouseMove( event ) {
+
+	event.preventDefault();
+
+	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+	//
+
+	raycaster.setFromCamera( mouse, camera );
+
+	if ( SELECTED ) {
+
+		var intersects = raycaster.intersectObject( plane );
+		SELECTED.position.copy( intersects[ 0 ].point.sub( offset ) );
+		return;
+
+	}
+
+	var intersects = raycaster.intersectObjects( objects );
+
+	if ( intersects.length > 0 ) {
+
+		if ( INTERSECTED != intersects[ 0 ].object ) {
+
+			if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
+
+			INTERSECTED = intersects[ 0 ].object;
+			INTERSECTED.currentHex = INTERSECTED.material.color.getHex();
+
+			plane.position.copy( INTERSECTED.position );
+			plane.lookAt( camera.position );
+
+		}
+
+		container.style.cursor = 'pointer';
+
+	} else {
+
+		if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
+
+		INTERSECTED = null;
+
+		container.style.cursor = 'auto';
+
+	}
+
+}
+
 function onDocumentMouseDown( event ) {
 
 	event.preventDefault();
 
-	mouse.x = ( event.clientX / renderer.domElement.width ) * 2 - 1;
-	mouse.y = - ( event.clientY / renderer.domElement.height ) * 2 + 1;
+	console.log ("down");
+
+	var vector = new THREE.Vector3( mouse.x, mouse.y, 0.5 ).unproject( camera );
+	 mouse.x = ( event.clientX / renderer.domElement.width ) * 2 - 1;
+ 	mouse.y = - ( event.clientY / renderer.domElement.height ) * 2 + 1;
 
 	raycaster.setFromCamera( mouse, camera );
 
 	var intersects = raycaster.intersectObjects( objects );
 
 	if ( intersects.length > 0 ) {
-	//	var n = synthNotes[intersects[0].object.uniqueNote];
-		console.log(intersects[0].object.uniqueNote);
+
+		
+		//controls.enabled = false;
+
+		SELECTED = intersects[ 0 ].object;
+		console.log ("intersect" + SELECTED); 
+		var intersects = raycaster.intersectObject( plane );
+		offset.copy( intersects[ 0 ].point ).sub( plane.position );
+
+		container.style.cursor = 'move';
+
+		//console.log(intersects[0].object.uniqueNote);
 
 
 		//intersects[ 0 ].object.material.color.setHex( Math.random() * 0xffffff );
-		if (intersects[ 0 ].object.claim == turnedOn) {
+		// if (SELECTED.object.claim == turnedOn) {
 			
-			console.log("turned off");
-			//synth.triggerRelease(n);
-			intersects[ 0 ].object.claim = turnedOff;
-			intersects[0].object.material.color.setHex(colors[intersects[0].object.uniqueNote]);
+		// 	console.log("turned off");
+		// 	//synth.triggerRelease(n);
+		// 	intersects[ 0 ].object.claim = turnedOff;
+		// 	intersects[0].object.material.color.setHex(colors[intersects[0].object.uniqueNote]);
 
-		}
-		else if (intersects[ 0 ].object.claim == turnedOff) {
+		// }
+		// else if (SELECTED.object.claim == turnedOff) {
 			
-			console.log("turned on");
-			//synth.triggerAttack(n);
-			intersects[ 0 ].object.claim = turnedOn;
-			intersects[0].object.material.color.setHex(666699)
-		}
+		// 	console.log("turned on");
+		// 	//synth.triggerAttack(n);
+		// 	intersects[ 0 ].object.claim = turnedOn;
+		// 	intersects[0].object.material.color.setHex(666699)
+		// }
 		
 
 		var particle = new THREE.Sprite( particleMaterial );
@@ -533,7 +614,67 @@ function onDocumentMouseDown( event ) {
 		particle.scale.x = particle.scale.y = 16;
 		scene.add( particle );
 
+
 	}
+
+}
+
+function onDocumentMouseUp( event ) {
+
+	event.preventDefault();
+
+	//controls.enabled = true;
+
+	if ( INTERSECTED ) {
+
+		plane.position.copy( INTERSECTED.position );
+
+		SELECTED = null;
+
+	}
+
+	container.style.cursor = 'auto';
+
+}
+
+ //function onDocumentMouseDown( event ) {
+
+// 	event.preventDefault();
+
+// 	mouse.x = ( event.clientX / renderer.domElement.width ) * 2 - 1;
+// 	mouse.y = - ( event.clientY / renderer.domElement.height ) * 2 + 1;
+
+	
+
+// 	if ( intersects.length > 0 ) {
+// 	//	var n = synthNotes[intersects[0].object.uniqueNote];
+// 		console.log(intersects[0].object.uniqueNote);
+
+
+// 		//intersects[ 0 ].object.material.color.setHex( Math.random() * 0xffffff );
+// 		if (intersects[ 0 ].object.claim == turnedOn) {
+			
+// 			console.log("turned off");
+// 			//synth.triggerRelease(n);
+// 			intersects[ 0 ].object.claim = turnedOff;
+// 			intersects[0].object.material.color.setHex(colors[intersects[0].object.uniqueNote]);
+
+// 		}
+// 		else if (intersects[ 0 ].object.claim == turnedOff) {
+			
+// 			console.log("turned on");
+// 			//synth.triggerAttack(n);
+// 			intersects[ 0 ].object.claim = turnedOn;
+// 			intersects[0].object.material.color.setHex(666699)
+// 		}
+		
+
+// 		var particle = new THREE.Sprite( particleMaterial );
+// 		particle.position.copy( intersects[ 0 ].point );
+// 		particle.scale.x = particle.scale.y = 16;
+// 		scene.add( particle );
+
+// 	}
 
 	/*
 	// Parse all the faces
@@ -543,7 +684,7 @@ function onDocumentMouseDown( event ) {
 
 	}
 	*/
-}
+// }
 
 			//
 
@@ -566,9 +707,10 @@ function render() {
 	theta += 0.1;
 	// console.log( kickValue );
 	// console.log (bassValue);
-	// console.log( hiHatValue);
+	// console.log( hiHatValue);ff
 	objects[1].scale.z = kickValue;
 	objects[2].scale.y = bassValue;
+	//objects[3].scale.x = pianoValue;
 	objects[0].scale.x = hiHatValue;
 	camera.position.x = radius * Math.sin( THREE.Math.degToRad( theta ) );
 	camera.position.y = radius * Math.sin( THREE.Math.degToRad( theta ) );
