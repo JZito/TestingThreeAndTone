@@ -238,6 +238,7 @@ function makeScore (kind) {
 	for (var i = 0; i < 4; i++) {
 		var len = getRandomInt(1,6);
 		var scoreNotes = [];
+		var duration = durations[ getRandomInt(0, durLen) ];
 		if (kind == 'bass'){
 			scoreNotes = melodyReturn(i, len);
 		}
@@ -304,7 +305,7 @@ function makeScore (kind) {
 			
 			
 			
-			var duration = durations[ getRandomInt(0, durLen) ];
+			
 
 			prevEntry = beat;
 
@@ -322,6 +323,10 @@ function makeScore (kind) {
 
 var bassTimes = makeScore('bass');
 var pianoTimes = makeScore('piano');
+
+for (var p = 0; p < pianoTimes.length; p++) {
+	console.log(pianoTimes[p]);
+}
 var Score = {
 	"kick" : [
 		"0:0", "0:2", "1:0", "1:2",
@@ -344,8 +349,10 @@ var Score = {
 		"26*8n", "30*8n",
 	],
 	"piano" : [
-		pianoTimes[0], pianoTimes[1], pianoTimes[2], pianoTimes[3],
-		pianoTimes[4], pianoTimes[5], pianoTimes[6], pianoTimes[7]
+		["0:0", ["C2", "E3", "G4"], "1m"],
+		["1:0", ["F2", "A3", "C4"], "1m"],
+		["2:0", ["G2", "D3", "A4"], "1m"],
+		["3:0", ["F3", "A2", "E4"], "1m"]
 	],
 	//additional arguments to the array format are
 	//passed back to the route's callback function
