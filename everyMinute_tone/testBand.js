@@ -47,8 +47,8 @@ function init() {
 	info.innerHTML = 'click to turn each cube on and off';
 	container.appendChild( info );
 
-	camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 10000 );
-	camera.position.set( 0, 300, 500 );
+	camera = new THREE.OrthographicCamera( 70, window.innerWidth / window.innerHeight, 1, 10000 );
+	camera.position.set( 0, 0, 500 );
 
 	scene = new THREE.Scene();
 
@@ -58,17 +58,17 @@ function init() {
 		var col = Math.random() * 0xffffff;
 		colors[i] = col;
 		var object = new THREE.Mesh( geometry, new THREE.MeshBasicMaterial( { color: col, opacity: 0.5 } ) );
-		object.position.x = Math.random() * 800 - 400;
-		object.position.y = Math.random() * 800 - 400;
-		object.position.z = Math.random() * 800 - 400;
+		object.position.x = i* 400;
+		object.position.y = 800 / i;
+		object.position.z = 20;
 
 		object.scale.x = Math.random() * 2 + 1;
 		object.scale.y = Math.random() * 2 + 1;
 		object.scale.z = Math.random() * 2 + 1;
 
-		object.rotation.x = Math.random() * 2 * Math.PI;
-		object.rotation.y = Math.random() * 2 * Math.PI;
-		object.rotation.z = Math.random() * 2 * Math.PI;
+		object.rotation.x = 0;
+		object.rotation.y = 0;
+		object.rotation.z = 0;
 		object.uniqueNote = i;
 		console.log(object.uniqueNote);
 		object.claim = turnedOff;

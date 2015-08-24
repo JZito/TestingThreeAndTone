@@ -465,7 +465,8 @@ var camera,
 //controls, 
 scene, renderer;
 var objects = [], plane;
-
+var viewSize = 500;
+var aspectRatio;
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2(),
 offset = new THREE.Vector3(),
@@ -478,9 +479,17 @@ function init() {
 
     container = document.createElement( 'div' );
     document.body.appendChild( container );
+	camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 10000 );
+    //aspectRatio =  = canvasWidth/canvasHeight;
+	
+    // camera = new THREE.OrthographicCamera(
+    // 	aspectRatio*viewSize / 2, aspectRatio*viewSize/2,
+    // 	viewSize / 2, viewSize / 2,
+    // 	-1000, 10000);
 
-    camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 10000 );
-    camera.position.z = 1000;
+    camera.position.x = 3;
+	camera.position.y = 0;
+	camera.position.z = 1000;
 
     // controls = new THREE.TrackballControls( camera );
     // controls.rotateSpeed = 1.0;
@@ -492,6 +501,8 @@ function init() {
     // controls.dynamicDampingFactor = 0.3;
 
     scene = new THREE.Scene();
+
+    // LIGHT //////
 
     scene.add( new THREE.AmbientLight( 0x505050 ) );
 
@@ -511,37 +522,39 @@ function init() {
 
     scene.add( light );
 
+    // BOXES
+    var cubePoints = [-400, -200, 0, 200, 400];
     var geometry = new THREE.BoxGeometry( 40, 40, 40 );
 
-    for ( var i = 0; i < 4; i ++ ) {
+    for ( var i = 0; i < 5; i ++ ) {
 
-      var object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } ) );
+    	var object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } ) );
 
-      object.position.x = Math.random() * 1000 - 500;
-      object.position.y = Math.random() * 600 - 300;
-      object.position.z = Math.random() * 800 - 400;
+      	object.position.x = cubePoints[i];
+		object.position.y = cubePoints[i];
+		object.position.z = -1000;
 
-      object.rotation.x = Math.random() * 2 * Math.PI;
-      object.rotation.y = Math.random() * 2 * Math.PI;
-      object.rotation.z = Math.random() * 2 * Math.PI;
+      	// object.rotation.x = Math.random() * 2 * Math.PI;
+      	// object.rotation.y = Math.random() * 2 * Math.PI;
+      	// object.rotation.z = Math.random() * 2 * Math.PI;
 
-      object.scale.x = Math.random() * 2 + 1;
-      object.scale.y = Math.random() * 2 + 1;
-      object.scale.z = Math.random() * 2 + 1;
+      	object.scale.x = 5;
+      	object.scale.y = 6;
+      	object.scale.z = 5;
 
-      object.castShadow = true;
-      object.receiveShadow = true;
+		object.castShadow = true;
+		object.receiveShadow = true;
 
-      scene.add( object );
+		scene.add( object );
 
-      objects.push( object );
-
+		objects.push( object );
     }
-
+    // PLANE /////////////
     plane = new THREE.Mesh(
-      new THREE.PlaneBufferGeometry( 2000, 2000, 8, 8 ),
-      new THREE.MeshBasicMaterial( { color: 0x000000, opacity: 0.25, transparent: true } )
+      	new THREE.PlaneBufferGeometry( 2000, 2000, 8, 8 ),
+        new THREE.MeshBasicMaterial( { color: 0x000000, opacity: 0.25, transparent: true } )
     );
+
     plane.visible = false;
     scene.add( plane );
 
@@ -601,9 +614,9 @@ function onDocumentMouseMove( event ) {
 
     if ( SELECTED ) {
 
-      var intersects = raycaster.intersectObject( plane );
-      SELECTED.position.copy( intersects[ 0 ].point.sub( offset ) );
-      return;
+		var intersects = raycaster.intersectObject( plane );
+		SELECTED.position.copy( intersects[ 0 ].point.sub( offset ) );
+		return;
 
     }
 
@@ -611,27 +624,27 @@ function onDocumentMouseMove( event ) {
 
     if ( intersects.length > 0 ) {
 
-      if ( INTERSECTED != intersects[ 0 ].object ) {
+		if ( INTERSECTED != intersects[ 0 ].object ) {
 
-        if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
+			if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
 
-        INTERSECTED = intersects[ 0 ].object;
-        INTERSECTED.currentHex = INTERSECTED.material.color.getHex();
+				INTERSECTED = intersects[ 0 ].object;
+				INTERSECTED.currentHex = INTERSECTED.material.color.getHex();
 
-        plane.position.copy( INTERSECTED.position );
-        plane.lookAt( camera.position );
+				plane.position.copy( INTERSECTED.position );
+				plane.lookAt( camera.position );
 
-      }
+		}
 
-      container.style.cursor = 'pointer';
+        container.style.cursor = 'pointer';
 
     } else {
 
-      if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
+    	if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
 
-      INTERSECTED = null;
+        INTERSECTED = null;
 
-      container.style.cursor = 'auto';
+        container.style.cursor = 'auto';
 
     }      
 
@@ -651,12 +664,12 @@ function onDocumentMouseDown( event ) {
 
       // controls.enabled = false;
 
-      SELECTED = intersects[ 0 ].object;
+		SELECTED = intersects[ 0 ].object;
 
-      var intersects = raycaster.intersectObject( plane );
-      offset.copy( intersects[ 0 ].point ).sub( plane.position );
+		var intersects = raycaster.intersectObject( plane );
+		offset.copy( intersects[ 0 ].point ).sub( plane.position );
 
-      container.style.cursor = 'move';
+		container.style.cursor = 'move';
 
     }
 
@@ -670,9 +683,9 @@ function onDocumentMouseUp( event ) {
 
     if ( INTERSECTED ) {
 
-      plane.position.copy( INTERSECTED.position );
+		plane.position.copy( INTERSECTED.position );
 
-      SELECTED = null;
+		SELECTED = null;
 
     }
 
@@ -708,9 +721,9 @@ function render() {
 		val0 = val0 < 0 ? 0 : val0;
 		valuesX[i].value = val0;
 		// console.log(val0 + objects[i]);
-		 valuesY[i].value = (objects[i].position.y / 1000);
-		 console.log (valuesZ[i] + i);
-		 valuesZ[i].value = (objects[i].position.z * 5);
+		valuesY[i].value = (objects[i].position.y / 1000);
+		// console.log (valuesZ[i] + i);
+		valuesZ[i].value = (objects[i].position.z * 5);
 		 
 		//console.log(valuesX[i] + " . " + valuesX[i].value)
 	}
@@ -736,7 +749,7 @@ function render() {
 	objects[0].scale.x = hiHatValue;
 	// camera.position.x = radius * Math.sin( THREE.Math.degToRad( theta ) );
 	// camera.position.y = radius * Math.sin( THREE.Math.degToRad( theta ) );
-	// camera.position.z = radius * Math.cos( THREE.Math.degToRad( theta ) );
+	//  camera.position.z = radius * Math.cos( THREE.Math.degToRad( theta ) );
 	camera.lookAt( scene.position );
 
 	renderer.render( scene, camera );
