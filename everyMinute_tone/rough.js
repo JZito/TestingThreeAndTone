@@ -461,12 +461,9 @@ Tone.Transport.start();
 
 ///////////// THREE VISUAL SECTION //////////////////////////////////////////////////
 var container, stats;
-var camera, 
-//controls, 
-scene, renderer;
+var camera, controls, scene, renderer;
 var objects = [], plane;
-var viewSize = 500;
-var aspectRatio;
+
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2(),
 offset = new THREE.Vector3(),
@@ -477,70 +474,58 @@ animate();
 
 function init() {
 
-    container = document.createElement( 'div' );
-    document.body.appendChild( container );
-	camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 10000 );
-    //aspectRatio =  = canvasWidth/canvasHeight;
-	
-    // camera = new THREE.OrthographicCamera(
-    // 	aspectRatio*viewSize / 2, aspectRatio*viewSize/2,
-    // 	viewSize / 2, viewSize / 2,
-    // 	-1000, 10000);
+	container = document.createElement( 'div' );
+	document.body.appendChild( container );
 
-    camera.position.x = 3;
-	camera.position.y = 0;
+	camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 10000 );
 	camera.position.z = 1000;
 
-    // controls = new THREE.TrackballControls( camera );
-    // controls.rotateSpeed = 1.0;
-    // controls.zoomSpeed = 1.2;
-    // controls.panSpeed = 0.8;
-    // controls.noZoom = false;
-    // controls.noPan = false;
-    // controls.staticMoving = true;
-    // controls.dynamicDampingFactor = 0.3;
+	controls = new THREE.TrackballControls( camera );
+	controls.rotateSpeed = 1.0;
+	controls.zoomSpeed = 1.2;
+	controls.panSpeed = 0.8;
+	controls.noZoom = false;
+	controls.noPan = false;
+	controls.staticMoving = true;
+	controls.dynamicDampingFactor = 0.3;
 
-    scene = new THREE.Scene();
+	scene = new THREE.Scene();
 
-    // LIGHT //////
+	scene.add( new THREE.AmbientLight( 0x505050 ) );
 
-    scene.add( new THREE.AmbientLight( 0x505050 ) );
+	var light = new THREE.SpotLight( 0xffffff, 1.5 );
+	light.position.set( 0, 500, 2000 );
+	light.castShadow = true;
 
-    var light = new THREE.SpotLight( 0xffffff, 1.5 );
-    light.position.set( 0, 500, 2000 );
-    light.castShadow = true;
+	light.shadowCameraNear = 200;
+	light.shadowCameraFar = camera.far;
+	light.shadowCameraFov = 50;
 
-    light.shadowCameraNear = 200;
-    light.shadowCameraFar = camera.far;
-    light.shadowCameraFov = 50;
+	light.shadowBias = -0.00022;
+	light.shadowDarkness = 0.5;
 
-    light.shadowBias = -0.00022;
-    light.shadowDarkness = 0.5;
+	light.shadowMapWidth = 2048;
+	light.shadowMapHeight = 2048;
 
-    light.shadowMapWidth = 2048;
-    light.shadowMapHeight = 2048;
+	scene.add( light );
 
-    scene.add( light );
+	var geometry = new THREE.BoxGeometry( 40, 40, 40 );
 
-    // BOXES
-    var cubePoints = [-400, -200, 0, 200, 400];
-    var geometry = new THREE.BoxGeometry( 40, 40, 40 );
+	for ( var i = 0; i < 5; i ++ ) {
 
-    for ( var i = 0; i < 5; i ++ ) {
+		var object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } ) );
 
-    	var object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } ) );
+		object.position.x = -100 + (i*50);
+		object.position.y = 100 + (i*50);
+		object.position.z = 0;
 
-      	object.position.x = cubePoints[i];
-		object.position.y = cubePoints[i];
-		object.position.z = -1000;
+		object.rotation.x = Math.random() * 2 * Math.PI;
+		object.rotation.y = Math.random() * 2 * Math.PI;
+		object.rotation.z = Math.random() * 2 * Math.PI;
 
-      	// object.rotation.x = Math.random() * 2 * Math.PI;
-      	// object.rotation.y = Math.random() * 2 * Math.PI;
-      	// object.rotation.z = Math.random() * 2 * Math.PI;
-
-      	object.scale.x = 5;
-      	object.scale.y = 6;
-      	object.scale.z = 5;
+		object.scale.x = Math.random() * 2 + 1;
+		object.scale.y = Math.random() * 2 + 1;
+		object.scale.z = Math.random() * 2 + 1;
 
 		object.castShadow = true;
 		object.receiveShadow = true;
@@ -548,161 +533,172 @@ function init() {
 		scene.add( object );
 
 		objects.push( object );
-    }
-    // PLANE /////////////
-    plane = new THREE.Mesh(
-      	new THREE.PlaneBufferGeometry( 2000, 2000, 8, 8 ),
-        new THREE.MeshBasicMaterial( { color: 0x000000, opacity: 0.25, transparent: true } )
-    );
 
-    plane.visible = false;
-    scene.add( plane );
+	}
 
-    renderer = new THREE.WebGLRenderer( { antialias: true } );
-    renderer.setClearColor( 0xf0f0f0 );
-    renderer.setPixelRatio( window.devicePixelRatio );
-    renderer.setSize( window.innerWidth, window.innerHeight );
-    
+	plane = new THREE.Mesh(
+		new THREE.PlaneBufferGeometry( 2000, 2000, 8, 8 ),
+		new THREE.MeshBasicMaterial( { color: 0x000000, opacity: 0.25, transparent: true } )
+	);
+	plane.visible = false;
+	scene.add( plane );
 
-    renderer.shadowMapEnabled = true;
-    renderer.shadowMapType = THREE.PCFShadowMap;
+	renderer = new THREE.WebGLRenderer( { antialias: true } );
+	renderer.setClearColor( 0xf0f0f0 );
+	renderer.setPixelRatio( window.devicePixelRatio );
+	renderer.setSize( window.innerWidth, window.innerHeight );
+	renderer.sortObjects = false;
 
-    container.appendChild( renderer.domElement );
+	renderer.shadowMapEnabled = true;
+	renderer.shadowMapType = THREE.PCFShadowMap;
 
-    var info = document.createElement( 'div' );
-    info.style.position = 'absolute';
-    info.style.top = '10px';
-    info.style.width = '100%';
-    info.style.textAlign = 'center';
-    info.innerHTML = 'drag a cube to change the sound';
-    container.appendChild( info );
+	container.appendChild( renderer.domElement );
 
-    stats = new Stats();
-    stats.domElement.style.position = 'absolute';
-    stats.domElement.style.top = '0px';
-    container.appendChild( stats.domElement );
+	var info = document.createElement( 'div' );
+	info.style.position = 'absolute';
+	info.style.top = '10px';
+	info.style.width = '100%';
+	info.style.textAlign = 'center';
+	info.innerHTML = '<a href="http://threejs.org" target="_blank">three.js</a> webgl - draggable cubes';
+	container.appendChild( info );
 
-    renderer.domElement.addEventListener( 'mousemove', onDocumentMouseMove, false );
-    renderer.domElement.addEventListener( 'mousedown', onDocumentMouseDown, false );
-    renderer.domElement.addEventListener( 'mouseup', onDocumentMouseUp, false );
+	stats = new Stats();
+	stats.domElement.style.position = 'absolute';
+	stats.domElement.style.top = '0px';
+	container.appendChild( stats.domElement );
 
-    //
+	renderer.domElement.addEventListener( 'mousemove', onDocumentMouseMove, false );
+	renderer.domElement.addEventListener( 'mousedown', onDocumentMouseDown, false );
+	renderer.domElement.addEventListener( 'mouseup', onDocumentMouseUp, false );
 
-    window.addEventListener( 'resize', onWindowResize, false );
+	//
+
+	window.addEventListener( 'resize', onWindowResize, false );
 
 }
 
 function onWindowResize() {
 
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
 
-    renderer.setSize( window.innerWidth, window.innerHeight );
+	renderer.setSize( window.innerWidth, window.innerHeight );
 
 }
 
 function onDocumentMouseMove( event ) {
 
-    event.preventDefault();
+	event.preventDefault();
 
-    mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-    mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
 
-    //
+	//
 
-    raycaster.setFromCamera( mouse, camera );
+	raycaster.setFromCamera( mouse, camera );
 
-    if ( SELECTED ) {
+	if ( SELECTED ) {
 
+		// var intersects = raycaster.intersectObject( plane );
+		// SELECTED.position.copy( intersects[ 0 ].point.sub( offset ) );
 		var intersects = raycaster.intersectObject( plane );
-		SELECTED.position.copy( intersects[ 0 ].point.sub( offset ) );
+        SELECTED.position.copy( intersects[ 0 ].point );
+
+        console.log(intersects[ 0 ].point);
 		return;
 
-    }
+	}
 
-    var intersects = raycaster.intersectObjects( objects );
+	var intersects = raycaster.intersectObjects( objects );
 
-    if ( intersects.length > 0 ) {
+
+	if ( intersects.length > 0 ) {
+		console.log("intersects.length > 0 ");
 
 		if ( INTERSECTED != intersects[ 0 ].object ) {
+				console.log("!= intersects[0].object " + INTERSECTED + " " + intersects[0].object);
 
 			if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
 
-				INTERSECTED = intersects[ 0 ].object;
-				INTERSECTED.currentHex = INTERSECTED.material.color.getHex();
+			INTERSECTED = intersects[ 0 ].object;
+			INTERSECTED.currentHex = INTERSECTED.material.color.getHex();
 
-				plane.position.copy( INTERSECTED.position );
-				plane.lookAt( camera.position );
+			plane.position.copy( INTERSECTED.position );
+			//plane.lookAt( camera.position );
 
 		}
 
-        container.style.cursor = 'pointer';
+		container.style.cursor = 'pointer';
 
-    } else {
+	} else {
 
-    	if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
+		if ( INTERSECTED ) INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
 
-        INTERSECTED = null;
+		INTERSECTED = null;
 
-        container.style.cursor = 'auto';
+		container.style.cursor = 'auto';
 
-    }      
+	}
 
 }
 
 function onDocumentMouseDown( event ) {
 
-    event.preventDefault();
+	event.preventDefault();
 
-    var vector = new THREE.Vector3( mouse.x, mouse.y, 0.5 ).unproject( camera );
+	var vector = new THREE.Vector3( mouse.x, mouse.y, 0.5 ).unproject( camera );
 
-    var raycaster = new THREE.Raycaster( camera.position, vector.sub( camera.position ).normalize() );
+	var raycaster = new THREE.Raycaster( camera.position, vector.sub( camera.position ).normalize() );
 
-    var intersects = raycaster.intersectObjects( objects );
+	var intersects = raycaster.intersectObjects( objects );
 
-    if ( intersects.length > 0 ) {
+	if ( intersects.length > 0 ) {
 
-      // controls.enabled = false;
+		controls.enabled = false;
 
 		SELECTED = intersects[ 0 ].object;
+
 
 		var intersects = raycaster.intersectObject( plane );
 		offset.copy( intersects[ 0 ].point ).sub( plane.position );
 
 		container.style.cursor = 'move';
 
-    }
+	}
 
 }
 
 function onDocumentMouseUp( event ) {
 
-    event.preventDefault();
+	event.preventDefault();
 
-    // controls.enabled = true;
+	controls.enabled = true;
 
-    if ( INTERSECTED ) {
+	if ( INTERSECTED ) {
 
 		plane.position.copy( INTERSECTED.position );
 
 		SELECTED = null;
 
-    }
+	}
 
-    container.style.cursor = 'auto';
+	container.style.cursor = 'auto';
 
 }
 
-      //
+//
 
 function animate() {
 
-    requestAnimationFrame( animate );
+	requestAnimationFrame( animate );
 
-    render();
-    stats.update();
+	render();
+	stats.update();
 
 }
+
+
+
 
 
 
